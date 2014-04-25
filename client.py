@@ -1,15 +1,13 @@
 from twisted.internet import reactor
 from twisted.python import log
-from autobahn.websocket import WebSocketClientFactory,\
-    WebSocketClientProtocol,\
-    connectWS
+from autobahn.twisted.websocket import WebSocketClientFactory, WebSocketClientProtocol
 import sys
 from rpi_ws.client_protocol import RPIClientProtocol, ReconnectingWebSocketClientFactory
 from rpi_ws import settings
 
 USE_SSL = False
-PORT = 9000
-SERVER = "localhost"
+PORT = 9090
+SERVER = "10.1.1.57"
 DEBUG = True
 
 
@@ -28,7 +26,7 @@ def main():
     factory = ReconnectingWebSocketClientFactory(server_url, useragent=settings.RPI_USER_AGENT, debug=DEBUG)
     factory.protocol = RPIClientProtocol
 
-    connectWS(factory)
+    reactor.connectTCP(SERVER, PORT, factory)
     reactor.run()
 
 if __name__ == '__main__':

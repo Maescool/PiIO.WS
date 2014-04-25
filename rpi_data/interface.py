@@ -104,35 +104,41 @@ class IWrite(IBase):
     def write(self, value):
         self.last_written_value = value
 
+try:
+    SPIADC.setup(0, 100000)
+    adcactive = True
+ 
+    class ADC(IRead):
+        """
+        Maps to ADC using library
+        Read only implied
+        """
+        IO_TYPE = IBase.IO_TYPE_INTEGER
+        # we're using an 8 channel ADC
+        IO_CHOICES = (
+            (0, 'CH0'),
+            (1, 'CH1'),
+            (2, 'CH2'),
+            (3, 'CH3'),
+            (4, 'CH4'),
+            (5, 'CH5'),
+            (6, 'CH6'),
+            (7, 'CH7'),
+        )
+    
+        class ChannelInUseError(Exception): pass
+    
+        channels_in_use = {}
+    
+        def __init__(self, ch_port):
+            super(ADC, self).__init__(ch_port)
+    
+        def read(self):
+            return SPIADC.read(self.ch_port)
 
-SPIADC.setup(0, 100000)
-class ADC(IRead):
-    """
-    Maps to ADC using library
-    Read only implied
-    """
-    IO_TYPE = IBase.IO_TYPE_INTEGER
-    # we're using an 8 channel ADC
-    IO_CHOICES = (
-        (0, 'CH0'),
-        (1, 'CH1'),
-        (2, 'CH2'),
-        (3, 'CH3'),
-        (4, 'CH4'),
-        (5, 'CH5'),
-        (6, 'CH6'),
-        (7, 'CH7'),
-    )
+except:
+    adcactive = False
 
-    class ChannelInUseError(Exception): pass
-
-    channels_in_use = {}
-
-    def __init__(self, ch_port):
-        super(ADC, self).__init__(ch_port)
-
-    def read(self):
-        return SPIADC.read(self.ch_port)
 
 GPIO.setmode(GPIO.BCM)
 class GPIOInput(IRead):

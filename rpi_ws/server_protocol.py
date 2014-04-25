@@ -1,8 +1,9 @@
 from twisted.python import log
 from twisted.internet import threads, reactor
 import twisted.internet.protocol as twistedsockets
-from autobahn.websocket import WebSocketServerFactory, WebSocketServerProtocol, HttpException
-import autobahn.httpstatus as httpstatus
+#from autobahn.websocket import WebSocketServerFactory, WebSocketServerProtocol, HttpException
+from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerFactory
+#import autobahn.httpstatus as httpstatus
 from twisted.web import resource
 import json
 import time
@@ -14,8 +15,10 @@ from hashlib import sha1
 import hmac
 import urllib2, urllib
 import math
+import re
 
 import twisted.internet.interfaces
+from netaddr.ip import IPAddress
 
 class SiteComm(resource.Resource):
     """
@@ -57,9 +60,12 @@ class SiteComm(resource.Resource):
         # we need mac, ip, interface desc
         payload = {}
         payload['mac'] = rpi.mac
-        payload['ip'] = rpi.protocol.peer.host
+	p = "((?P<login>\w+):(?P<password>\w+)@)?(?P<ip>\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3})(:(?P<port>\d+))?"
+        payload['ip'] = re.match(p, rpi.protocol.peer).group('ip')
         payload['iface'] = rpi.iface
-
+        
+        log.msg('Registering pi: mac: %s ip: %s iface: %s' % (payload['mac'], payload['ip'], payload['iface']))
+        
         post_data = {'json':json.dumps(payload)}
         post_data = urllib.urlencode(post_data)
         try:
@@ -661,7 +667,7 @@ class RPISocketServerFactory(WebSocketServerFactory):
             self.rpi_clients_registered_users[rpi.mac].append(client)
             if self.debug:
                 log.msg('RPISocketServerFactory.register_user_to_rpi rpi:%s user:%s' %
-                        (rpi.mac, client.protocol.peerstr))
+                        (rpi.mac, client.protocol.peer))
 
     def unregister_user_to_rpi(self, client, rpi):
         client.unregister_to_rpi()
@@ -672,7 +678,7 @@ class RPISocketServerFactory(WebSocketServerFactory):
                 self.rpi_clients_registered_users[rpi.mac].remove(client)
                 if self.debug:
                     log.msg('RPISocketServerFactory.unregister_user_to_rpi rpi:%s user:%s' %
-                            (rpi.mac, client.protocol.peerstr))
+                            (rpi.mac, client.protocol.peer))
         if rpi.mac not in self.rpi_clients_registered_users or len(self.rpi_clients_registered_users[rpi.mac]) == 0:
             # Pause streaming
             rpi.pause_streaming()
@@ -695,15 +701,15 @@ class RPISocketServerFactory(WebSocketServerFactory):
             user.notifyRPIState(rpi, state)
 
     def register_user(self, user):
-        if user.protocol.peerstr not in self.user_client:
-            self.user_client[user.protocol.peerstr] = user
+        if user.protocol.peer not in self.user_client:
+            self.user_client[user.protocol.peer] = user
             if self.debug:
-                log.msg('RPISocketServerFactory.register_user %s' % user.protocol.peerstr)
+                log.msg('RPISocketServerFactory.register_user %s' % user.protocol.peer)
 
     def disconnect_user(self, user):
         if self.debug:
-            log.msg('RPISocketServerFactory.disconnect_user %s' % user.protocol.peerstr)
-        del self.user_client[user.protocol.peerstr]
+            log.msg('RPISocketServerFactory.disconnect_user %s' % user.protocol.peer)
+        del self.user_client[user.protocol.peer]
         self.unregister_user_to_rpi(user, user.associated_rpi)
 
     def register_rpi(self, rpi):

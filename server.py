@@ -2,16 +2,17 @@ from twisted.internet import reactor, ssl
 import twisted.internet.protocol as twistedsockets
 from twisted.python import log
 import sys
-from autobahn.websocket import listenWS
+#from autobahn.websocket import listenWS
+from autobahn.twisted.websocket import WebSocketServerProtocol, WebSocketServerFactory
 from rpi_ws.server_protocol import RPIServerProtocol, RPISocketServerFactory, SiteComm, FlashSocketPolicyServerProtocol
 from twisted.web import server
 
 # SSL applies to both HTTP and WS
 WS_USE_SSL = False
 HTTP_USE_SSL = False
-WS_PORT = 9000
-SERVER = "localhost"
-DEBUG = False
+WS_PORT = 9090
+SERVER = "10.1.1.57"
+DEBUG = True
 HTTP_PORT = 8090
 PROVIDEFLASHSOCKETPOLICYFILE = True
 
@@ -37,10 +38,15 @@ def main():
     factory.sitecomm = sitecomm
     site = server.Site(sitecomm)
 
+    wsfactory = WebSocketServerFactory(server_url, debug=DEBUG)
+    #wsfactory.protocol = RPISocketServerFactory
+
     if WS_USE_SSL:
-        listenWS(factory, contextFactory)
+        reactor.listenSSL(WS_PORT, wsfactory, contextFactory)
+        #listenWS(factory, contextFactory)
     else:
-        listenWS(factory)
+        reactor.listenTCP(WS_PORT, factory)
+        #listenWS(factory)
 
     if HTTP_USE_SSL:
         reactor.listenSSL(HTTP_PORT, site, contextFactory)

@@ -1,6 +1,6 @@
 from twisted.internet import reactor
 from twisted.python import log
-from autobahn.websocket import WebSocketClientProtocol, WebSocketClientFactory
+from autobahn.twisted.websocket import WebSocketClientProtocol, WebSocketClientFactory
 from twisted.internet.protocol import ReconnectingClientFactory
 import rpi_data.interface as interface
 import rpi_data.utility
